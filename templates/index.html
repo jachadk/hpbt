@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Klubben</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-6 flex justify-between items-center border-b border-slate-800 pb-4">
+            <h1 class="text-2xl font-bold text-emerald-400">🏸 Badminton Klubben</h1>
+            <div class="space-x-2">
+                <a href="/?tab=register" class="px-3 py-1.5 rounded text-sm {% if current_tab == 'register' %}bg-emerald-600 font-bold{% else %}bg-slate-800{% endif %}">Indberet</a>
+                <a href="/?tab=stats" class="px-3 py-1.5 rounded text-sm {% if current_tab == 'stats' %}bg-emerald-600 font-bold{% else %}bg-slate-800{% endif %}">Statistik & Rangliste</a>
+                <a href="/?tab=history" class="px-3 py-1.5 rounded text-sm {% if current_tab == 'history' %}bg-emerald-600 font-bold{% else %}bg-slate-800{% endif %}">📜 Historik</a>
+            </div>
+        </header>
+
+        <!-- FAN 1: INDBERET KAMP -->
+        {% if current_tab == 'register' %}
+        <section class="bg-slate-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4">Registrer Kamp</h2>
+            <form action="/matches/new" method="post" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Dato</label>
+                        <input type="date" name="match_date" value="{{ today }}" required class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Kamptype / Opsætning</label>
+                        <select name="match_preset" id="presetSelect" onchange="togglePresetFields()" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white">
+                            <optgroup label="Standard Single (3 Sæt)">
+                                <option value="TH_vs_KH">Kamp 1: TH mod KH</option>
+                                <option value="TH_vs_KP">Kamp 2: TH mod KP</option>
+                                <option value="KP_vs_KH">Kamp 3: KP mod KH</option>
+                            </optgroup>
+                            <optgroup label="Standard Double (5 Sæt)">
+                                <option value="DOUBLE_5_SET">KH & JA mod TH & KP</option>
+                            </optgroup>
+                            <optgroup label="2 Spillere (5 Sæt)">
+                                <option value="SINGLE_2P_5_SET">Special 5-sæt single</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2-spiller 5-sæt selector -->
+                <div id="twoPlayerBox" class="hidden grid grid-cols-2 gap-4 bg-slate-700/50 p-3 rounded">
+                    <div>
+                        <label class="text-xs text-slate-400">Spiller 1</label>
+                        <select name="single_custom_t1" class="w-full bg-slate-700 rounded p-2">
+                            {% for code, name in players.items() %}
+                            <option value="{{ code }}">{{ code }} ({{ name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Spiller 2</label>
+                        <select name="single_custom_t2" class="w-full bg-slate-700 rounded p-2">
+                            {% for code, name in players.items() %}
+                            <option value="{{ code }}" {% if code == 'KH' %}selected{% endif %}>{{ code }} ({{ name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Scorefelter -->
+                <div class="space-y-2 pt-2">
+                    <label class="block text-xs uppercase tracking-wider text-slate-400">Sætscores (Obligatoriske)</label>
+                    {% for i in range(1, 4) %}
+                    <div class="flex items-center space-x-2">
+                        <span class="w-16 text-sm text-slate-400">Sæt {{ i }}:</span>
+                        <input type="number" min="0" max="30" name="s{{ i }}_1" placeholder="Hjemme" required class="w-24 bg-slate-700 border border-slate-600 rounded p-1.5 text-center">
+                        <span>-</span>
+                        <input type="number" min="0" max="30" name="s{{ i }}_2" placeholder="Ude" required class="w-24 bg-slate-700 border border-slate-600 rounded p-1.5 text-center">
+                    </div>
+                    {% endfor %}
+
+                    <div id="extraSets" class="hidden space-y-2">
+                        {% for i in range(4, 6) %}
+                        <div class="flex items-center space-x-2">
+                            <span class="w-16 text-sm text-slate-400">Sæt {{ i }}:</span>
+                            <input type="number" min="0" max="30" name="s{{ i }}_1" placeholder="Hjemme" class="w-24 bg-slate-700 border border-slate-600 rounded p-1.5 text-center">
+                            <span>-</span>
+                            <input type="number" min="0" max="30" name="s{{ i }}_2" placeholder="Ude" class="w-24 bg-slate-700 border border-slate-600 rounded p-1.5 text-center">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold p-2.5 rounded transition">Gem Kampresultat</button>
+            </form>
+        </section>
+        {% endif %}
+
+        <!-- FAN 2: STATISTIK & REKORDER -->
+        {% if current_tab == 'stats' %}
+        <section class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="text-xs text-emerald-400 font-bold uppercase">⚡ Dagens Form (Seneste Spilledag)</div>
+                    <div class="text-sm mt-1">{{ highlights.daily_form or "Ingen data endnu" }}</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="text-xs text-rose-400 font-bold uppercase">💥 Største Pointforskel i et Sæt</div>
+                    <div class="text-sm mt-1">{{ highlights.blowout or "Ingen data endnu" }}</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="text-xs text-amber-400 font-bold uppercase">🔥 Tætteste Gysersæt</div>
+                    <div class="text-sm mt-1">{{ highlights.thriller or "Ingen data endnu" }}</div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="text-xs text-cyan-400 font-bold uppercase">🏃 Længste Maratonkamp</div>
+                    <div class="text-sm mt-1">{{ highlights.marathon or "Ingen data endnu" }}</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Rangliste & Elo</h2>
+                    <div class="space-x-1 text-xs">
+                        <a href="/?tab=stats&filter=all" class="px-2 py-1 rounded {% if filter == 'all' %}bg-emerald-600{% else %}bg-slate-700{% endif %}">Samlet</a>
+                        <a href="/?tab=stats&filter=single" class="px-2 py-1 rounded {% if filter == 'single' %}bg-emerald-600{% else %}bg-slate-700{% endif %}">Kun Single</a>
+                        <a href="/?tab=stats&filter=double" class="px-2 py-1 rounded {% if filter == 'double' %}bg-emerald-600{% else %}bg-slate-700{% endif %}">Kun Double</a>
+                    </div>
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead class="text-slate-400 border-b border-slate-700">
+                        <tr>
+                            <th class="py-2">Spiller</th>
+                            <th>Elo</th>
+                            <th>Kampe (V-T)</th>
+                            <th>Sæt (+/-)</th>
+                            <th>Point (+/-)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700">
+                        {% for p in leaderboard %}
+                        <tr>
+                            <td class="py-2 font-semibold">{{ p.name }} <span class="text-xs text-slate-500">({{ p.code }})</span></td>
+                            <td class="font-bold text-emerald-400">{{ p.elo }}</td>
+                            <td>{{ p.matches_won }}-{{ p.matches_lost }}</td>
+                            <td>
+                                {{ p.sets_won }}-{{ p.sets_lost }}
+                                <span class="text-xs {% if p.set_diff >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                    ({% if p.set_diff > 0 %}+{% endif %}{{ p.set_diff }})
+                                </span>
+                            </td>
+                            <td>
+                                {{ p.points_won }}-{{ p.points_lost }}
+                                <span class="text-xs {% if p.point_diff >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                    ({% if p.point_diff > 0 %}+{% endif %}{{ p.point_diff }})
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Head-to-Head (Single) -->
+            <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+                    <h2 class="text-xl font-bold text-amber-400">⚔️ Indbyrdes Statistik (Head-to-Head)</h2>
+                    <form method="get" class="flex items-center space-x-2 text-sm">
+                        <input type="hidden" name="tab" value="stats">
+                        <input type="hidden" name="filter" value="{{ filter }}">
+                        <select name="h2h_p1" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white">
+                            {% for code, name in players.items() %}
+                            <option value="{{ code }}" {% if h2h_p1 == code %}selected{% endif %}>{{ code }} ({{ name }})</option>
+                            {% endfor %}
+                        </select>
+                        <span class="text-slate-400 font-bold">vs</span>
+                        <select name="h2h_p2" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white">
+                            {% for code, name in players.items() %}
+                            <option value="{{ code }}" {% if h2h_p2 == code %}selected{% endif %}>{{ code }} ({{ name }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="bg-amber-600 hover:bg-amber-500 font-bold px-3 py-1 rounded text-white">Vis</button>
+                    </form>
+                </div>
+
+                <!-- Overbliksbjælke -->
+                <div class="grid grid-cols-3 text-center py-4 bg-slate-700/40 rounded-lg mb-6">
+                    <div>
+                        <div class="text-lg font-bold text-emerald-400">{{ h2h.p1_name }}</div>
+                        <div class="text-2xl font-black mt-1">{{ h2h.p1_match_wins }}</div>
+                        <div class="text-xs text-slate-400">Kampe vundet</div>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <div class="text-xs uppercase tracking-widest text-slate-400 font-bold">Spillede Kampe</div>
+                        <div class="text-2xl font-black text-white mt-1">{{ h2h.total_matches }}</div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            Sæt: {{ h2h.p1_set_wins }} - {{ h2h.p2_set_wins }} | Point: {{ h2h.p1_points }} - {{ h2h.p2_points }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-emerald-400">{{ h2h.p2_name }}</div>
+                        <div class="text-2xl font-black mt-1">{{ h2h.p2_match_wins }}</div>
+                        <div class="text-xs text-slate-400">Kampe vundet</div>
+                    </div>
+                </div>
+
+                <!-- Kamp-historik mellem parret -->
+                {% if h2h.matches %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="py-2">Dato</th>
+                                <th>Resultat</th>
+                                <th>Vinder</th>
+                                <th>Sætscore</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700">
+                            {% for m in h2h.matches %}
+                            <tr>
+                                <td class="py-2 text-slate-400">{{ m.date }}</td>
+                                <td class="font-bold">{{ m.score }}</td>
+                                <td class="font-semibold text-emerald-400">{{ players.get(m.winner, m.winner) }}</td>
+                                <td class="text-xs text-slate-300">
+                                    {% for s in m.sets %}
+                                    <span class="bg-slate-700 px-1.5 py-0.5 rounded mr-1">{{ s[0] }}-{{ s[1] }}</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 text-center py-4">Ingen indbyrdes single-kampe registreret mellem disse to spillere endnu.</p>
+                {% endif %}
+            </div>
+
+        <!-- FAN 3: HISTORIK & MANAGEMENT -->
+        {% if current_tab == 'history' %}
+        <section class="space-y-6">
+            <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-bold mb-4">Vælg Kamp fra Historik</h2>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <select id="historySelect" onchange="loadHistoryEdit(this.value)" class="flex-1 bg-slate-700 border border-slate-600 rounded p-2">
+                        <option value="">-- Vælg kamp ID --</option>
+                        {% for m in matches %}
+                        <option value="{{ m.id }}" {% if edit_match and edit_match.id == m.id %}selected{% endif %}>
+                            #{{ m.id }} - {{ m.match_date }}: {{ m.team1 }} vs {{ m.team2 }} ({{ m.set_score }})
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    {% if edit_match %}
+                    <form action="/matches/{{ edit_match.id }}/delete" method="post" onsubmit="return confirm('Er du sikker på, at du vil slette kamp #{{ edit_match.id }} permanent?');">
+                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded text-sm font-bold">Slet Kamp</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {% if edit_match %}
+                <form action="/matches/{{ edit_match.id }}/edit" method="post" class="mt-4 border-t border-slate-700       <div class="space-y-2">
+                        <label class="block text-xs text-slate-400">Sætresultater</label>
+                        {% for score in edit_match.sets %}
+                        <div class="flex items-center space-x-2">
+                            <span class="w-16 text-xs text-slate-400">Sæt {{ loop.index }}:</span>
+                            <input type="number" min="0" max="30" name="s{{ loop.index }}_1" value="{{ score[0] }}" required class="w-20 bg-slate-700 rounded p-1 text-center">
+                            <span>-</span>
+                            <input type="number" min="0" max="30" name="s{{ loop.index }}_2" value="{{ score[1] }}" required class="w-20 bg-slate-700 rounded p-1 text-center">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold mt-2">Opdater Kamp</button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-lg shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="font-bold">Database Backup</h3>
+                    <p class="text-xs text-slate-400">Download eller gendan alle registrerede kampe via CSV.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/backup/download" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm font-semibold border border-slate-600">📥 Download CSV</a>
+                    <form action="/backup/restore" method="post" enctype="multipart/form-data" class="flex items-center space-x-2" onsubmit="return confirm('Advarsel: Gendannelse overskriver nuværende database. Fortsæt?');">
+                        <input type="file" name="file" accept=".csv" required class="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-slate-200">
+                        <button type="submit" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded text-sm font-semibold">Gendan</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <script>
+        function togglePresetFields() {
+            const val = document.getElementById("presetSelect").value;
+            const extraSets = document.getElementById("extraSets");
+            const twoPlayerBox = document.getElementById("twoPlayerBox");
+
+            if (val === "DOUBLE_5_SET" || val === "SINGLE_2P_5_SET") {
+                extraSets.classList.remove("hidden");
+                extraSets.querySelectorAll("input").forEach(i => i.required = true);
+            } else {
+                extraSets.classList.add("hidden");
+                extraSets.querySelectorAll("input").forEach(i => { i.required = false; i.value = ""; });
+            }
+
+            if (val === "SINGLE_2P_5_SET") {
+                twoPlayerBox.classList.remove("hidden");
+            } else {
+                twoPlayerBox.classList.add("hidden");
+            }
+        }
+
+        function loadHistoryEdit(matchId) {
+            if (matchId) {
+                window.location.href = '/?tab=history&edit_id=' + matchId;
+            } else {
+                window.location.href = '/?tab=history';
+            }
+        }
+    </script>
+</body>
+</html>
