@@ -3,7 +3,7 @@ import csv
 import io
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
-import libsql_experimental as libsql
+import libsql
 
 TURSO_URL = os.environ.get("TURSO_DATABASE_URL")
 TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN")
@@ -85,7 +85,7 @@ def get_all_matches() -> List[Dict[str, Any]]:
             m = dict(r)
             s_rows = conn.execute("SELECT score1, score2 FROM sets WHERE match_id = ? ORDER BY set_number", (m["id"],)).fetchall()
             m["sets"] = [(s["score1"], s["score2"]) for s in s_rows]
-            
+
             # Udregn sætvinder
             s1_wins = sum(1 for s in m["sets"] if s[0] > s[1])
             s2_wins = sum(1 for s in m["sets"] if s[1] > s[0])
